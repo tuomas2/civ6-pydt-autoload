@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="a1b2c3d4-e5f6-7890-abcd-pydt00000001" version="1">
+  <Properties>
+    <Name>PYDT Autoload</Name>
+    <Description>Automatically loads the most recent PYDT hotseat save on game startup. No clicks needed — go straight to playing your damn turn.</Description>
+    <Teaser>Auto-load PYDT turns on startup</Teaser>
+    <Authors>Community</Authors>
+    <AffectsSavedGames>0</AffectsSavedGames>
+    <CompatibleVersions>1.2,2.0</CompatibleVersions>
+    <EnabledByDefault>1</EnabledByDefault>
+  </Properties>
+  <FrontEndActions>
+    <ImportFiles id="PYDT_FrontEnd">
+      <Properties>
+        <LoadOrder>9999</LoadOrder>
+      </Properties>
+      <File>UI/FrontEnd/MainMenu.lua</File>
+      <File>UI/FrontEnd/LoadGameMenu.lua</File>
+      <File>UI/FrontEnd/Multiplayer/HostGame.lua</File>
+      <File>UI/FrontEnd/Multiplayer/StagingRoom.lua</File>
+    </ImportFiles>
+  </FrontEndActions>
+  <Files>
+    <File>UI/FrontEnd/MainMenu.lua</File>
+    <File>UI/FrontEnd/LoadGameMenu.lua</File>
+    <File>UI/FrontEnd/Multiplayer/HostGame.lua</File>
+    <File>UI/FrontEnd/Multiplayer/StagingRoom.lua</File>
+  </Files>
+</Mod>
