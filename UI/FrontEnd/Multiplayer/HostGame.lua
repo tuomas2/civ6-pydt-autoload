@@ -1,6 +1,7 @@
 -------------------------------------------------
 -- Multiplayer Host Game Screen
 -------------------------------------------------
+g_PYDTAutolaunch = false;	-- PYDT Autoload flag
 include("LobbyTypes");		--MPLobbyTypes
 include("ButtonUtilities");
 include("InstanceManager");
@@ -439,6 +440,12 @@ function OnShow()
 	--]]
 
 	RealizeShellTabs();
+
+	-- PYDT Autoload: auto-click "Load Game" after normal initialization
+	if g_PYDTAutolaunch then
+		print("PYDT Autoload: HostGame ready, clicking Load Game.");
+		LoadButtonClick();
+	end
 end
 
 -- ===========================================================================
@@ -810,7 +817,9 @@ function Initialize()
 	ResizeButtonToText( Controls.BackButton );
 	Resize();
 
-	-- Custom popup setup	
+	-- Custom popup setup
 	m_kPopupDialog = PopupDialog:new( "InGameTopOptionsMenu" );
+
+	LuaEvents.PYDTAutoloadTriggered.Add( function() g_PYDTAutolaunch = true; end );
 end
 Initialize();

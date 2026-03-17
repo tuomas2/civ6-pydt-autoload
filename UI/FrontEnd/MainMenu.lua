@@ -49,6 +49,13 @@ g_LastFileQueryRequestID = nil;			-- The file list ID used to determine whether 
 g_MostRecentSave = nil;					-- The most recent single player save a user has (locally)
 
 -- ===========================================================================
+-- PYDT Autoload globals
+-- ===========================================================================
+g_PYDTFileQueryRequestID = nil;			-- File list query ID for hotseat saves
+g_PYDTAutoloadDone = false;				-- Only autoload once per session
+local PYDT_MAX_AGE_SECONDS = 60;		-- Max save age in seconds (1 minute)
+
+-- ===========================================================================
 -- Button Handlers
 -- ===========================================================================
 function OnResumeGame()
@@ -57,6 +64,19 @@ function OnResumeGame()
 		print("MainMenu::OnResumeGame() leaving the network session.");
 		Network.LeaveGame();
 		Network.LoadGame(g_MostRecentSave, serverType);
+	end
+end
+
+-- ===========================================================================
+-- PYDT Autoload: Load the most recent hotseat save automatically
+-- ===========================================================================
+function OnPYDTAutoload()
+	if not g_PYDTAutoloadDone then
+		g_PYDTAutoloadDone = true;
+		print("PYDT Autoload: Navigating to Hotseat > Load Game...");
+		LuaEvents.PYDTAutoloadTriggered();
+		-- Follow the normal menu path: Multiplayer > Hotseat
+		OnHotSeat();
 	end
 end
 
@@ -1344,6 +1364,13 @@ function OnShow()
 	local options = SaveLocationOptions.NORMAL + SaveLocationOptions.AUTOSAVE + SaveLocationOptions.QUICKSAVE + SaveLocationOptions.MOST_RECENT_ONLY + SaveLocationOptions.LOAD_METADATA ;
 	g_LastFileQueryRequestID = UI.QuerySaveGameList( saveLocation, gameType, options );
 
+	-- PYDT Autoload: query for hotseat saves to check if PYDT save exists
+	g_PYDTFileQueryRequestID = nil;
+	if not g_PYDTAutoloadDone then
+		local hotseatOptions = SaveLocationOptions.NORMAL + SaveLocationOptions.LOAD_METADATA;
+		g_PYDTFileQueryRequestID = UI.QuerySaveGameList(SaveLocations.LOCAL_STORAGE, SaveTypes.HOTSEAT, hotseatOptions);
+	end
+
 	local error = Modding.GetLastLoadError();
 	if (not m_bHasShownError and error ~= nil) then
 		m_bHasShownError = true;
@@ -1382,14 +1409,15 @@ end
 
 -- Call-back for when the list of files have been updated.
 function OnFileListQueryResults( fileList, queryID )
+	-- Original: single player most recent save
 	if g_LastFileQueryRequestID ~= nil then
 		if (g_LastFileQueryRequestID == queryID) then
 			g_MostRecentSave = nil;
 			if (fileList ~= nil) then
 				for i, v in ipairs(fileList) do
-					g_MostRecentSave = v;		-- There really should only be one or 
+					g_MostRecentSave = v;		-- There really should only be one or
 				end
-			
+
 				UpdateResumeGame();
 			end
 
@@ -1397,7 +1425,49 @@ function OnFileListQueryResults( fileList, queryID )
 			g_LastFileQueryRequestID = nil;
 		end
 	end
-	
+
+	-- PYDT Autoload: check if any PYDT save exists in hotseat folder
+	if g_PYDTFileQueryRequestID ~= nil then
+		if (g_PYDTFileQueryRequestID == queryID) then
+			local pydtFound = nil;
+			if (fileList ~= nil) then
+				for i, v in ipairs(fileList) do
+					if not v.IsDirectory then
+						local saveName = v.Name or "";
+						local savePath = v.Path or "";
+						if string.find(string.upper(saveName), "PYDT") or string.find(string.upper(savePath), "PYDT") then
+							pydtFound = v;
+							break;
+						end
+					end
+				end
+			end
+
+			UI.CloseFileListQuery(g_PYDTFileQueryRequestID);
+			g_PYDTFileQueryRequestID = nil;
+
+			if pydtFound and not g_PYDTAutoloadDone then
+				-- Check save age using Windows FILETIME -> Unix epoch conversion
+				local fileTime = UI.GetSaveGameModificationTimeRaw(pydtFound);
+				local now = os.time();
+				local age = nil;
+				if fileTime ~= nil and now ~= nil then
+					local saveUnix = (fileTime / 10000000) - 11644473600;
+					age = now - saveUnix;
+				end
+				print("PYDT Autoload: Found PYDT save, age=" .. tostring(age) .. "s");
+				if age ~= nil and age >= 0 and age < PYDT_MAX_AGE_SECONDS then
+					print("PYDT Autoload: Save is fresh (" .. tostring(math.floor(age)) .. "s), loading.");
+					OnPYDTAutoload();
+				else
+					print("PYDT Autoload: Save too old (" .. tostring(math.floor(age or 0)) .. "s), skipping.");
+				end
+			elseif not pydtFound then
+				print("PYDT Autoload: No PYDT hotseat save found.");
+			end
+		end
+	end
+
 end
 
 -- ===========================================================================

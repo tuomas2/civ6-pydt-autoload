@@ -20,6 +20,7 @@ local m_thisLoadFile;
 local m_QuickloadId;
 local m_isActionButtonDisabled:boolean = false;	-- Action button state before yes/no prompt
 g_IsDeletingFile = false;
+g_PYDTAutolaunch = false;	-- PYDT Autoload flag
 
 g_QuickLoadQueryRequestID = nil;
 
@@ -476,6 +477,23 @@ end
 -- ===========================================================================
 function OnFileListQueryComplete()
 	UpdateActionButtonState();
+
+	-- PYDT Autoload: find and load PYDT save automatically
+	if g_PYDTAutolaunch and g_FileList ~= nil then
+		for i, v in ipairs(g_FileList) do
+			local saveName = v.Name or "";
+			local savePath = v.Path or "";
+			if string.find(string.upper(saveName), "PYDT") or string.find(string.upper(savePath), "PYDT") then
+				g_PYDTAutolaunch = false;
+				print("PYDT Autoload: Found PYDT save in LoadGameMenu, loading '" .. tostring(saveName) .. "'...");
+				m_thisLoadFile = v;
+				OnLoadYes();
+				return;
+			end
+		end
+		g_PYDTAutolaunch = false;
+		print("PYDT Autoload: No PYDT save found in LoadGameMenu file list.");
+	end
 end
 
 -- ===========================================================================
@@ -562,6 +580,7 @@ function Initialize()
 	LuaEvents.InGameTopOptionsMenu_SetLoadGameServerType.Add( OnSetLoadGameServerType );
 
 	LuaEvents.FileListQueryResults.Add( OnQuickLoadQueryResults );
+	LuaEvents.PYDTAutoloadTriggered.Add( function() g_PYDTAutolaunch = true; end );
 
 	Events.SystemUpdateUI.Add( OnUpdateUI );
 

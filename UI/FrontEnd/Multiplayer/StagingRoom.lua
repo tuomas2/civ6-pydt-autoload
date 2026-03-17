@@ -1,6 +1,7 @@
-----------------------------------------------------------------  
+----------------------------------------------------------------
 -- Staging Room Screen
-----------------------------------------------------------------  
+----------------------------------------------------------------
+g_PYDTAutolaunch = false;	-- PYDT Autoload: set via LuaEvent when auto-loading
 include( "InstanceManager" );	--InstanceManager
 include( "PlayerSetupLogic" );
 include( "NetworkUtilities" );
@@ -2520,13 +2521,28 @@ function OnShow()
 		else
 			local minPlayers = Automation.GetSetParameter("CurrentTest", "MinPlayers", 2);
 			if (minPlayers ~= nil) then
-				-- See if we are going to be the only one in the game, set ourselves ready. 
+				-- See if we are going to be the only one in the game, set ourselves ready.
 				if (minPlayers == 1) then
 					Automation.Log("HostGame MinPlayers==1, host readying up.");
 					SetLocalReady(true);
 				end
 			end
 		end
+	end
+
+	-- PYDT Autoload: auto-launch after a short delay to let the game finish setup
+	if g_PYDTAutolaunch and GameConfiguration.IsHotseat() then
+		g_PYDTAutolaunch = false;
+		local frameCount = 0;
+		print("PYDT Autoload: StagingRoom initialized, scheduling auto-launch.");
+		ContextPtr:SetUpdate(function()
+			frameCount = frameCount + 1;
+			if frameCount >= 30 then
+				ContextPtr:ClearUpdate();
+				print("PYDT Autoload: Launching game now.");
+				OnReadyButton();
+			end
+		end);
 	end
 end
 
@@ -3185,6 +3201,7 @@ function OnRaise(resetChat:boolean)
 	LuaEvents.StagingRoom_EnsureHostGame();
 
 	UIManager:QueuePopup( ContextPtr, PopupPriority.Current );
+
 end
 
 -- ===========================================================================
@@ -3349,6 +3366,7 @@ function Initialize()
 	LuaEvents.JoiningRoom_ShowStagingRoom.Add( OnRaise );
 	LuaEvents.EditHotseatPlayer_UpdatePlayer.Add(UpdatePlayerEntry);
 	LuaEvents.Multiplayer_ExitShell.Add( OnHandleExitRequest );
+	LuaEvents.PYDTAutoloadTriggered.Add( function() g_PYDTAutolaunch = true; end );
 
 	Controls.TitleLabel:SetText(Locale.ToUpper(Locale.Lookup("LOC_MULTIPLAYER_STAGING_ROOM")));
 	ResizeButtonToText(Controls.BackButton);
