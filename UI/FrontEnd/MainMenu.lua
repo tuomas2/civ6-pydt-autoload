@@ -53,7 +53,7 @@ g_MostRecentSave = nil;					-- The most recent single player save a user has (lo
 -- ===========================================================================
 g_PYDTFileQueryRequestID = nil;			-- File list query ID for hotseat saves
 g_PYDTAutoloadDone = false;				-- Only autoload once per session
-local PYDT_MAX_AGE_SECONDS = 60;		-- Max save age in seconds (1 minute)
+local PYDT_MAX_AGE_SECONDS = 300;		-- Max save age in seconds (5 minutes)
 
 -- ===========================================================================
 -- Button Handlers
